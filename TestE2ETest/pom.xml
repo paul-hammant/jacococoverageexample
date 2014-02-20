@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mycompany</groupId>
+        <artifactId>TestProject</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>TestE2ETest</artifactId>
+    <packaging>jar</packaging>
+    <properties>
+        <jetty.version>7.6.14.v20131031</jetty.version>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <jacoco.agent>${project.build.directory}/lib/jacocoagent.jar</jacoco.agent>
+        <jacoco.report>${project.build.directory}/jacoco.exec</jacoco.report>
+        <jacoco.include>com/mycompany/**</jacoco.include>
+        <jacoco.dumpdir>${project.build.directory}\dependencies\classes</jacoco.dumpdir>
+        <jacoco.vmarg>-javaagent:${jacoco.agent}=destfile=${jacoco.report},includes=${jacoco.include},classdumpdir=${jacoco.dumpdir}</jacoco.vmarg>
+    </properties>
+    
+    <profiles>
+       
+               
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.16</version>
+                        <executions>
+                            <execution>
+                                <id>integration-tests</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Skips integration tests if the value of skip.integration.tests property is true -->
+                                    <skipTests>false</skipTests>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+                       
+        </profile>
+        
+        <profile>
+            <id>cargo</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.cargo</groupId>
+                        <artifactId>cargo-maven2-plugin</artifactId>
+                        <version>1.4.7</version>
+                        <executions>
+                            <execution>
+                                <id>start-container</id>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                            </execution>
+                            <execution>
+                                <id>stop-container</id>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                            </execution>
+                        </executions>
+                
+                        <configuration>
+                            <container>
+                                <containerId>jetty7x</containerId>
+                                <artifactInstaller>
+                                    <groupId>org.eclipse.jetty</groupId>
+                                    <artifactId>jetty-distribution</artifactId>
+                                    <version>${jetty.version}</version>
+                                </artifactInstaller>
+                                <log>${basedir}/target/jetty.log</log>
+                            </container>
+                            <deployables>
+                                <deployable>
+                                    <groupId>com.mycompany</groupId>
+                                    <artifactId>TestWeb</artifactId>
+                                    <type>war</type>
+                                </deployable>
+                            </deployables>
+                            <configuration>
+                                <properties>
+                                    <cargo.hostname>${it.webcontainer.hostname}</cargo.hostname>
+                                    <cargo.jvmargs>${jacoco.vmarg}</cargo.jvmargs>
+                                </properties>
+
+                            </configuration>
+                        </configuration>
+                    </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+ 
+        <profile>
+            <id>jetty</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-maven-plugin</artifactId>
+                        <version>8.1.14.v20131031</version>
+                        <executions>
+                            <execution>
+                                <id>start-jetty</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>run-forked</goal>
+                                </goals>
+                                <configuration>
+                                    <connectors>
+                                        <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                                            <port>8080</port>
+                                        </connector>
+                                    </connectors>
+                                    <contextPath>/TestWeb</contextPath>
+                                    <stopKey>caps</stopKey>
+                                    <stopPort>9999</stopPort>
+                                    <stopWait>30</stopWait>
+                                    <daemon>true</daemon>
+                                    <waitForChild>false</waitForChild>
+                                    <jvmArgs>${jacoco.vmarg}</jvmArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-jetty</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <stopKey>caps</stopKey>
+                                    <stopPort>9999</stopPort>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+        
+        
+        
+        <profile>
+            <id>jacoco</id>
+            <build>
+                <plugins>
+                    
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>2.8</version>
+                        <executions>
+                            <execution>
+                                <id>unpack</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>unpack</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.jacoco</groupId>
+                                            <artifactId>org.jacoco.agent</artifactId>
+                                            <version>0.6.4.201312101107</version>
+                                            <type>jar</type>
+                                            <overWrite>false</overWrite>
+                                            <outputDirectory>${project.build.directory}/lib/</outputDirectory>
+                                            <includes>**/*.jar</includes>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>src-dependencies</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>unpack-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <includeGroupIds>com.mycompany</includeGroupIds>
+                                    <classifier>sources</classifier>
+                                    <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
+                                    <outputDirectory>${project.build.directory}/dependencies/sources</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+        
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.jacoco</groupId>
+                                <artifactId>org.jacoco.ant</artifactId>
+                                <version>0.6.4.201312101107</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>ant-contrib</groupId>
+                                <artifactId>ant-contrib</artifactId>
+                                <version>20020829</version>
+                            </dependency>
+                        </dependencies>
+                        <executions>
+                            <execution>
+                                <id>jacoco-report</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+
+                                        <taskdef name="jacoco-report"
+                                                 classname="org.jacoco.ant.ReportTask"
+                                                 classpathref="maven.plugin.classpath" />
+                                        <taskdef classpathref="maven.runtime.classpath"
+                                                 resource="net/sf/antcontrib/antcontrib.properties" />
+                                        <available
+                                            file="${project.basedir}/target/jacoco.exec"
+                                            property="jacoco.exec.file.exists" />
+                                        <echo message="${project.basedir}/target/jacoco.exec" />
+                                        <if>
+                                            <equals arg1="${jacoco.exec.file.exists}"
+                                                    arg2="true" />
+                                            <then>
+                                                <echo message="Executing jacoco report" />
+
+                                                <trycatch>
+                                                    <try>
+                                                        <jacoco-report>
+                                                            <executiondata>
+                                                                <file
+                                                                    file="${project.basedir}/target/jacoco.exec" />
+                                                            </executiondata>
+
+                                                            <structure name="SSO">
+                                                                <classfiles>
+                                                                    <fileset
+                                                                        dir="target/dependencies/classes" />
+                                                                </classfiles>
+
+                                                                <sourcefiles
+                                                                    encoding="UTF-8">
+                                                                    <fileset
+                                                                        dir="target/dependencies/sources" />
+                                                                </sourcefiles>
+                                                            </structure>
+                                                            <html destdir="${project.basedir}/target/jacoco/report" />
+                                                            <xml destfile="${project.basedir}/target/jacoco/report/jacoco.xml"/>
+                                                        </jacoco-report>
+                                                    </try>
+                                                    <catch>
+                                                        <echo>skipping</echo>
+                                                    </catch>
+                                                </trycatch>
+                                            </then>
+                                            <else>
+                                                <echo message="No jacoco.exec file found." />
+                                            </else>
+                                        </if>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+    </profiles>
+    
+    <dependencies>
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <version>0.6.4.201312101107</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mycompany</groupId>
+            <artifactId>TestWeb</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>com.mycompany</groupId>
+            <artifactId>TestWeb</artifactId>
+            <classifier>sources</classifier>
+            <version>${project.version}</version>
+            <type>jar</type>
+        </dependency>
+                
+        <dependency>
+            <groupId>com.mycompany</groupId>
+            <artifactId>TestApi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mycompany</groupId>
+            <artifactId>TestImpl</artifactId>
+        </dependency>
+    </dependencies>
+
+    
+</project>
