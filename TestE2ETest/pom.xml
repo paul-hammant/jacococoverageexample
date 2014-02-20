@@ -12,16 +12,13 @@
         <jetty.version>7.6.14.v20131031</jetty.version>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
-        <jacoco.agent>${project.build.directory}/lib/jacocoagent.jar</jacoco.agent>
-        <jacoco.report>${project.build.directory}/jacoco.exec</jacoco.report>
-        <jacoco.include>com/mycompany/**</jacoco.include>
-        <jacoco.dumpdir>${project.build.directory}\dependencies\classes</jacoco.dumpdir>
-        <jacoco.vmarg>-javaagent:${jacoco.agent}=destfile=${jacoco.report},includes=${jacoco.include},classdumpdir=${jacoco.dumpdir}</jacoco.vmarg>
+        <skipTests>true</skipTests>
     </properties>
     
     <profiles>
        
                
+        <!-- Profile that will run the integration tests. -->
         <profile>
             <id>integration-tests</id>
             <build>
@@ -50,112 +47,6 @@
         </profile>
         
         <profile>
-            <id>cargo</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.cargo</groupId>
-                        <artifactId>cargo-maven2-plugin</artifactId>
-                        <version>1.4.7</version>
-                        <executions>
-                            <execution>
-                                <id>start-container</id>
-                                <goals>
-                                    <goal>start</goal>
-                                </goals>
-                                <phase>pre-integration-test</phase>
-                            </execution>
-                            <execution>
-                                <id>stop-container</id>
-                                <goals>
-                                    <goal>stop</goal>
-                                </goals>
-                                <phase>post-integration-test</phase>
-                            </execution>
-                        </executions>
-                
-                        <configuration>
-                            <container>
-                                <containerId>jetty7x</containerId>
-                                <artifactInstaller>
-                                    <groupId>org.eclipse.jetty</groupId>
-                                    <artifactId>jetty-distribution</artifactId>
-                                    <version>${jetty.version}</version>
-                                </artifactInstaller>
-                                <log>${basedir}/target/jetty.log</log>
-                            </container>
-                            <deployables>
-                                <deployable>
-                                    <groupId>com.mycompany</groupId>
-                                    <artifactId>TestWeb</artifactId>
-                                    <type>war</type>
-                                </deployable>
-                            </deployables>
-                            <configuration>
-                                <properties>
-                                    <cargo.hostname>${it.webcontainer.hostname}</cargo.hostname>
-                                    <cargo.jvmargs>${jacoco.vmarg}</cargo.jvmargs>
-                                </properties>
-
-                            </configuration>
-                        </configuration>
-                    </plugin>
-
-                </plugins>
-            </build>
-        </profile>
- 
-        <profile>
-            <id>jetty</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.mortbay.jetty</groupId>
-                        <artifactId>jetty-maven-plugin</artifactId>
-                        <version>8.1.14.v20131031</version>
-                        <executions>
-                            <execution>
-                                <id>start-jetty</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>run-forked</goal>
-                                </goals>
-                                <configuration>
-                                    <connectors>
-                                        <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
-                                            <port>8080</port>
-                                        </connector>
-                                    </connectors>
-                                    <contextPath>/TestWeb</contextPath>
-                                    <stopKey>caps</stopKey>
-                                    <stopPort>9999</stopPort>
-                                    <stopWait>30</stopWait>
-                                    <daemon>true</daemon>
-                                    <waitForChild>false</waitForChild>
-                                    <jvmArgs>${jacoco.vmarg}</jvmArgs>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>stop-jetty</id>
-                                <phase>post-integration-test</phase>
-                                <goals>
-                                    <goal>stop</goal>
-                                </goals>
-                                <configuration>
-                                    <stopKey>caps</stopKey>
-                                    <stopPort>9999</stopPort>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                </plugins>
-            </build>
-        </profile>
-        
-        
-        
-        <profile>
             <id>jacoco</id>
             <build>
                 <plugins>
@@ -165,26 +56,12 @@
                         <artifactId>maven-dependency-plugin</artifactId>
                         <version>2.8</version>
                         <executions>
-                            <execution>
-                                <id>unpack</id>
-                                <phase>compile</phase>
-                                <goals>
-                                    <goal>unpack</goal>
-                                </goals>
-                                <configuration>
-                                    <artifactItems>
-                                        <artifactItem>
-                                            <groupId>org.jacoco</groupId>
-                                            <artifactId>org.jacoco.agent</artifactId>
-                                            <version>0.6.4.201312101107</version>
-                                            <type>jar</type>
-                                            <overWrite>false</overWrite>
-                                            <outputDirectory>${project.build.directory}/lib/</outputDirectory>
-                                            <includes>**/*.jar</includes>
-                                        </artifactItem>
-                                    </artifactItems>
-                                </configuration>
-                            </execution>
+                            <!--
+                                    Copy all sources with the same groupid as this project to the output folder 
+                                    These sources are used to generate the Jacoco test coverage report 
+                                    If at some point you get a report and can't click down to the source 
+                                    You will probably have to make sure the sources of that jar are coppied to the output directory 
+                            -->
                             <execution>
                                 <id>src-dependencies</id>
                                 <phase>pre-integration-test</phase>
@@ -192,10 +69,29 @@
                                     <goal>unpack-dependencies</goal>
                                 </goals>
                                 <configuration>
+                                    <includes>**/*.java</includes>
                                     <includeGroupIds>com.mycompany</includeGroupIds>
                                     <classifier>sources</classifier>
                                     <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
                                     <outputDirectory>${project.build.directory}/dependencies/sources</outputDirectory>
+                                </configuration>
+                            </execution>
+                            <!-- 
+                                    Copy all classes jacoco will instrument to the output directory so jacoco can generate a report >
+                                    Jacoco need's the class files of every class you want to generate a report >
+                                    IF YOUR CONTAINER INSTRUMENTS CLASS FILES AT LOAD TIME USE JACOCO'S CLASSDUMPDIR FEATURE 
+                            -->
+                            <execution>
+                                <id>class-dependencies</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>unpack-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>**/*.class</includes>
+                                    <includeGroupIds>com.mycompany</includeGroupIds>
+                                    <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
+                                    <outputDirectory>${project.build.directory}/dependencies/classes</outputDirectory>
                                 </configuration>
                             </execution>
                         </executions>
@@ -218,15 +114,17 @@
                             </dependency>
                         </dependencies>
                         <executions>
+                            <!-- Generate the jacoco report -->
                             <execution>
                                 <id>jacoco-report</id>
-                                <phase>post-integration-test</phase>
+                                <phase>verify</phase>
                                 <goals>
                                     <goal>run</goal>
                                 </goals>
                                 <configuration>
-                                    <tasks>
-
+                                    <target>
+                                        
+                              
                                         <taskdef name="jacoco-report"
                                                  classname="org.jacoco.ant.ReportTask"
                                                  classpathref="maven.plugin.classpath" />
@@ -275,7 +173,32 @@
                                                 <echo message="No jacoco.exec file found." />
                                             </else>
                                         </if>
-                                    </tasks>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.6.4.201312101107</version>
+                        <executions>
+                            <!--
+                                Prepares the property pointing to the JaCoCo runtime agent which
+                            -->
+                            <execution>
+                                <id>jacoco-agent</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <destFile>${jacoco.report}</destFile>
+                                    <includes>
+                                        <include>com/mycompany/**</include>
+                                    </includes>
+                                    <outputDirectory>${jacoco.report}</outputDirectory>
+                                    <propertyName>jacoco.vmarg</propertyName>
                                 </configuration>
                             </execution>
                         </executions>
@@ -284,6 +207,144 @@
             </build>
         </profile>
         
+        <!-- Profile that will start a jetty server with cargo -->
+        <profile>
+            <id>cargo</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.cargo</groupId>
+                        <artifactId>cargo-maven2-plugin</artifactId>
+                        <version>1.4.7</version>
+                        <executions>
+                            <execution>
+                                <id>start-container</id>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                            </execution>
+                            <execution>
+                                <id>stop-container</id>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                            </execution>
+                        </executions>
+                
+                        <configuration>
+                            <container>
+                                <containerId>jetty7x</containerId>
+                                <artifactInstaller>
+                                    <groupId>org.eclipse.jetty</groupId>
+                                    <artifactId>jetty-distribution</artifactId>
+                                    <version>${jetty.version}</version>
+                                </artifactInstaller>
+                                <log>${basedir}/target/jetty.log</log>
+                            </container>
+                            <deployables>
+                                <deployable>
+                                    <groupId>com.mycompany</groupId>
+                                    <artifactId>TestWeb</artifactId>
+                                    <type>war</type>
+                                </deployable>
+                            </deployables>
+                            <configuration>
+                                <properties>
+                                    <cargo.hostname>${it.webcontainer.hostname}</cargo.hostname>
+                                    <cargo.jvmargs>${jacoco.vmarg}</cargo.jvmargs>
+                                </properties>
+                            </configuration>
+                        </configuration>
+                    </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+ 
+        <!-- Profile that will start a jetty server without cargo -->
+        <profile>
+            <id>jetty</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-maven-plugin</artifactId>
+                        <version>8.1.14.v20131031</version>
+                        <executions>
+                            <execution>
+                                <id>start-jetty</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>run-forked</goal>
+                                </goals>
+                                <configuration>
+                                    <connectors>
+                                        <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                                            <port>8080</port>
+                                        </connector>
+                                    </connectors>
+                                    <contextPath>/TestWeb</contextPath>
+                                    <stopKey>caps</stopKey>
+                                    <stopPort>9999</stopPort>
+                                    <stopWait>30</stopWait>
+                                    <daemon>true</daemon>
+                                    <waitForChild>false</waitForChild>
+                                    <jvmArgs>${jacoco.vmarg}</jvmArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-jetty</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <stopKey>caps</stopKey>
+                                    <stopPort>9999</stopPort>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                </plugins>
+            </build>
+        </profile>
+        <!-- 
+                Task that will just sleep for 5 seconds,
+                This profile is needed when using jetty as container.
+                Presumably the jacoco report task is to quick to read the jacoco.exec file.
+                This causes test coverage to be 0 as the jacoco.exec file isn't flushed yet while the report is being generated.
+                The reason this is a separate profile and not combined in the jetty profile is because i want to use this to prove this exactly is the issue.
+        -->
+        <profile>
+            <id>sleep</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <executable>sleep</executable>
+                            <arguments>
+                                <argument>5</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+                      
     </profiles>
     
     <dependencies>
