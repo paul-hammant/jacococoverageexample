@@ -4,9 +4,11 @@
 *.jar
 *.war
 *.ear
+*.iml
 
 #Project Files
 .project
+.idea
 target/
 nbproject/private/
 build/
