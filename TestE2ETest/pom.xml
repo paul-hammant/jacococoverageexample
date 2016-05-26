@@ -100,12 +100,12 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>1.8</version>
                         <dependencies>
                             <dependency>
                                 <groupId>org.jacoco</groupId>
                                 <artifactId>org.jacoco.ant</artifactId>
-                                <version>0.6.4.201312101107</version>
+                                <version>0.7.6.201602180812</version>
                             </dependency>
                             <dependency>
                                 <groupId>ant-contrib</groupId>
@@ -181,7 +181,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.6.4.201312101107</version>
+                        <version>0.7.6.201602180812</version>
                         <executions>
                             <!--
                                 Prepares the property pointing to the JaCoCo runtime agent which
@@ -215,7 +215,7 @@
                     <plugin>
                         <groupId>org.codehaus.cargo</groupId>
                         <artifactId>cargo-maven2-plugin</artifactId>
-                        <version>1.4.7</version>
+                        <version>1.4.19</version>
                         <executions>
                             <execution>
                                 <id>start-container</id>
@@ -271,7 +271,7 @@
                     <plugin>
                         <groupId>org.mortbay.jetty</groupId>
                         <artifactId>jetty-maven-plugin</artifactId>
-                        <version>8.1.14.v20131031</version>
+                        <version>8.1.16.v20140903</version>
                         <executions>
                             <execution>
                                 <id>start-jetty</id>
@@ -325,7 +325,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>1.2.1</version>
+                        <version>1.5.0</version>
                         <executions>
                             <execution>
                                 <phase>post-integration-test</phase>
